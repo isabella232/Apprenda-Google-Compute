@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-
 using System.Collections.Generic;
 
 namespace Apprenda.SaaSGrid.Addons.Google.Compute
@@ -52,18 +51,22 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
             if(key.Equals("zone"))
             {
                 options.Zone = value;
+                return;
             }
             if(key.Equals("sourceimage"))
             {
                 options.SourceImage = value;
+                return;
             }
             if (key.Equals("disktype"))
             {
                 options.DiskType = value;
+                return;
             }
             if (key.Equals("machinetype"))
             {
                 options.MachineType = value;
+                return;
             }
             throw new ArgumentException(string.Format("Developer parameter {0} is either not readable, or not supported at this time.", key));
         }

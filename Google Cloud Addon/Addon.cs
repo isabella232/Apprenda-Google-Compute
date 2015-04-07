@@ -1,12 +1,5 @@
 ﻿using System;
 using Apprenda.Services.Logging;
-using Google.Apis;
-using Google.Apis.Auth.OAuth2;
-using Google.Apis.Download;
-using Google.Apis.Services;
-using Google.Apis.Storage.v1;
-using Google.Apis.Storage.v1.Data;
-using Google.Apis.Util.Store;
 
 namespace Apprenda.SaaSGrid.Addons.Google.Compute
 {
@@ -16,32 +9,51 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
 
         public override OperationResult Deprovision(AddonDeprovisionRequest request)
         {
-            throw new NotImplementedException();
+            string connectionData = request.ConnectionData;
+            var deprovisionResult = new ProvisionAddOnResult(connectionData);
+            AddonManifest manifest = request.Manifest;
+            var developerParameters = request.DeveloperParameters;
+            var developerOptions = GoogleCloudDeveloperOptions.Parse(developerParameters, manifest);
+            try
+            {
+                var conInfo = ConnectionInfo.Parse(connectionData);
+                developerOptions.InstanceName = conInfo.InstanceName;
+                developerOptions.Zone = conInfo.Zone;
+                var op = new InstanceOperations(manifest, developerOptions);
+                op.RemoveInstance();
+                deprovisionResult.IsSuccess = true;
+                deprovisionResult.EndUserMessage = "Successfully deleted instance: " + conInfo.InstanceName;
+            }
+            
+            catch (Exception e)
+            {
+                deprovisionResult.EndUserMessage = e.Message;
+                deprovisionResult.IsSuccess = false;
+            }
+            return deprovisionResult;
         }
 
         public override ProvisionAddOnResult Provision(AddonProvisionRequest request)
         {
-          /*  var provisionResult = new ProvisionAddOnResult("") { IsSuccess = false };
+            var provisionResult = new ProvisionAddOnResult("") { IsSuccess = false };
             var manifest = request.Manifest;
             var developerParameters = request.DeveloperParameters;
-            var developerOptions = GoogleStorageDeveloperOptions.Parse(developerParameters);
-
+            var developerOptions = GoogleCloudDeveloperOptions.Parse(developerParameters, manifest);
             try
             {
-                //add a bucket
+                //add instance
                 var op = new InstanceOperations(manifest, developerOptions);
-                op.AddBucket();
+                op.AddInstance();
                 provisionResult.IsSuccess = true;
-                provisionResult.ConnectionData = "BucketName=" + developerOptions.BucketName;
-                provisionResult.EndUserMessage = "Successfully added bucket " + developerOptions.BucketName + "\n";
+                provisionResult.ConnectionData = "InstanceName=" + developerOptions.InstanceName + "&Zone=" + developerOptions.Zone;
+                provisionResult.EndUserMessage = "Successfully added instance " + developerOptions.InstanceName + "\n";
             }
             catch (Exception e)
             {
                 provisionResult.EndUserMessage = e.Message;
                 provisionResult.IsSuccess = false;
             }
-            return provisionResult;*/
-            throw new NotImplementedException();
+            return provisionResult;
         }
 
         public override OperationResult Test(AddonTestRequest request)
@@ -56,10 +68,25 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
             testProgress += "Attempting to add an instance...";
             try
             {
+                //add instance
                 var op = new InstanceOperations(manifest, developerOptions);
                 op.AddInstance();
-                testProgress += "Sucessfully added instance.\n";
-                testResult.IsSuccess = true;
+                testProgress += "Successfully added instance.\n";
+                try
+                {
+                    System.Threading.Thread.Sleep(10000);
+                    //remove instance
+                    testProgress += "Attempting to remove an instance...";
+                    op.RemoveInstance();
+                    testProgress += "Successfully removed instance.\n";
+                    testResult.IsSuccess = true;
+                }
+                catch(Exception e)
+                {
+                    Log.Error("Error occurred during test of Google Cloud Addon", e);
+                    testProgress += "EXCEPTION: " + e + "\n";
+                    testProgress += "Failed to remove instance \n";
+                }
             }
             catch(Exception e)
             {

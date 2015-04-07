@@ -4,14 +4,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-
 using Google.Apis;
 using Google.Apis.Auth.OAuth2;
-using Google.Apis.Download;
 using Google.Apis.Services;
-using Google.Apis.Storage.v1;
-using Google.Apis.Storage.v1.Data;
-using Google.Apis.Util.Store;
 using Google.Apis.Compute.v1;
 using Google.Apis.Compute.v1.Data;
 
@@ -62,6 +57,11 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
                 Scopes = new[] { ComputeService.Scope.Compute, ComputeService.Scope.CloudPlatform, ComputeService.Scope.DevstorageFullControl, "https://www.googleapis.com/auth/logging.write" }
             }.FromCertificate(certificate));
 
+            var service = new ComputeService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = "Apprenda Addon",
+            });
             var newInstance = new Instance
             {
                 Name = InstanceName,
@@ -113,16 +113,37 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
                 }
             };
 
-            var service = new ComputeService(new BaseClientService.Initializer()
-            {
-                HttpClientInitializer = credential,
-                ApplicationName = "Apprenda Addon",
-            });
             try
             {
                 var newInstanceQuery = await new InstancesResource.InsertRequest(service, newInstance, ProjectId, Zone).ExecuteAsync();        
             }
             catch (Exception e)
+            {
+                throw new Exception(e.Message);
+            }
+        }
+
+        private async Task RemoveInstanceTask()
+        {
+            //credentials for certificate-based service accounts
+            var certificate = new X509Certificate2(CertificateFile, "notasecret", X509KeyStorageFlags.Exportable);
+            ServiceAccountCredential credential = new ServiceAccountCredential(
+            new ServiceAccountCredential.Initializer(ServiceAccountEmail)
+            {
+                Scopes = new[] { ComputeService.Scope.Compute, ComputeService.Scope.CloudPlatform, ComputeService.Scope.DevstorageFullControl, "https://www.googleapis.com/auth/logging.write" }
+            }.FromCertificate(certificate));
+
+            var service = new ComputeService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = "Apprenda Addon",
+            });
+
+            try
+            {
+                var removeInstanceQuery = await new InstancesResource.DeleteRequest(service, ProjectId, Zone, InstanceName).ExecuteAsync();
+            }
+            catch(Exception e)
             {
                 throw new Exception(e.Message);
             }
@@ -135,6 +156,18 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
                 AddInstanceTask().Wait();
             }
             catch (Exception e)
+            {
+                throw new Exception(e.Message);
+            }
+        }
+
+        internal void RemoveInstance()
+        {
+            try
+            {
+                RemoveInstanceTask().Wait();
+            }
+            catch(Exception e)
             {
                 throw new Exception(e.Message);
             }

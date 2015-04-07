@@ -9,6 +9,7 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
     public class ConnectionInfo
     {
         public String InstanceName { get; set; }
+        public String Zone { get; set; }
 
         public static ConnectionInfo Parse(string connectionInfo)
         {
@@ -39,13 +40,16 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
 
         public static void MapToProperty(ConnectionInfo existingInfo, string key, string value)
         {
-            if ("instanceName".Equals(key))
+            if ("instancename".Equals(key))
             {
                 existingInfo.InstanceName = value;
                 return;
+            } 
+            if ("zone".Equals(key))
+            {
+                existingInfo.Zone = value;
+                return;
             }
-
-
             throw new ArgumentException(string.Format("The connection info '{0}' was not expected and is not understood.", key));
         }
 
@@ -55,6 +59,8 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
 
             if (InstanceName != null)
                 builder.AppendFormat("InstanceName={0}", InstanceName);
+            if (Zone != null)
+                builder.AppendFormat("Zone={0}", InstanceName);
             return builder.ToString();
         }
     }
