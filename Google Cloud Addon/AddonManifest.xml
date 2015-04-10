@@ -17,11 +17,13 @@
     <property key="ProjectID" displayName="project ID" description="Required - please supply the google cloud project ID" value=""/>
     <property key="Email" displayName="Service account email" description="Required - please supply an the service account email" value=""/>
     <property key="CertFile" displayName="Certificate File" description="Required - please supply the path to the certificate file" value="" />
-    <property key="DefaultInstanceName" displayName="Instance Name" description="Default name of the instance. Should be overridden during provisioning." value="apprenda-test-instance" />
-    <property key="DefaultSourceImage" displayName="Source Image" description="Default source image. Can be overridden during provisioning." value="backports-debian-7-wheezy-v20150325" />
-    <property key="DefaultDiskType" displayName="Disk Type" description="Default disk type. Can be overridden during provisioning." value="pd-standard" />
-    <property key="DefaultMachineType" displayName="Machine Type" description="Default machine type. Can be overridden during provisioning." value="n1-standard-1" />
-    <property key="DefaultZone" displayName="Zone" description="Default zone. Can be overridden during provisioning." value="us-central1-c" />
   </properties>
-  <parameters allowUserDefinedParameters="true" />
+  <parameters allowUserDefinedParameters="true">
+    <parameter key="InstanceName" displayName ="Instance Name" isRequired="true" isEncrypted ="false" description="Name of the VM instance to deploy" />
+    <parameter key="MachineType" displayName ="Machine Type" isRequired="true" isEncrypted ="false" description="Machine type for VM" defaultValue ="n1-standard-1"/>
+    <parameter key="Zone" displayName ="Zone" isRequired="true" isEncrypted ="false" description="Zone for VM" defaultValue ="us-central1-c"/>
+    <parameter key ="SourceImageProject" displayName = "Source Image Project" isRequired="true" isEncrypted="false" description="debian, centos, windows, etc.."/>
+    <parameter key="SourceImage" displayName ="Source Image" isRequired="true" isEncrypted ="false" description="Source image for VM" />
+    <parameter key="DiskType" displayName ="Disk Type" isRequired="true" isEncrypted ="false" description="Disk type for VM" defaultValue ="pd-standard"/>
+  </parameters>
 </addonManifest>

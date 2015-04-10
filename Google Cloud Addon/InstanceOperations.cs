@@ -9,12 +9,15 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Compute.v1;
 using Google.Apis.Compute.v1.Data;
-
+using Apprenda.Services.Logging;
+using System.Diagnostics;
 
 namespace Apprenda.SaaSGrid.Addons.Google.Compute
 {
     internal class InstanceOperations
     {
+        private static readonly ILogger Log = LogManager.Instance().GetLogger(typeof(GoogleCloudAddon));
+
         private string ProjectId { get; set; }
         private string ServiceAccountEmail { get; set; }
         private string InstanceName { get; set; }
@@ -23,6 +26,7 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
         private string MachineType { get; set; }
         private string SourceImage { get; set; }
         private string DiskType { get; set; }
+        private string SourceImageProject { get; set; }
 
         internal InstanceOperations(AddonManifest manifest, GoogleCloudDeveloperOptions developerOptions)
         {
@@ -38,6 +42,7 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
                 DiskType = developerOptions.DiskType;
                 Zone = developerOptions.Zone;
                 MachineType = developerOptions.MachineType;
+                SourceImageProject = developerOptions.SourceImageProject;
             }
 
             catch (Exception e)
@@ -64,8 +69,22 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
             });
             var newInstance = new Instance
             {
-                Name = InstanceName,
-                MachineType = "zones/" + Zone + "/machineTypes/" + MachineType,
+                Disks = new List<AttachedDisk>
+                {
+                    new AttachedDisk
+                    {
+                        Type = "PERSISTENT",
+                        Boot = true,
+                        Mode = "READ_WRITE",
+                        DeviceName = "root-disk",
+                        AutoDelete = true,
+                        InitializeParams = new AttachedDiskInitializeParams 
+                        {
+                            SourceImage = "projects/" + SourceImageProject + "-cloud/global/images/" + SourceImage,
+                            DiskType = "zones/" + Zone + "/diskTypes/" + DiskType
+                        }
+                    }
+                },
                 NetworkInterfaces = new List<NetworkInterface>
                 { 
                     new NetworkInterface
@@ -81,22 +100,15 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
                         }
                     }
                 },
-                Disks = new List<AttachedDisk>
+                Zone = "zones/" + Zone,
+                CanIpForward = false,
+                Scheduling = new Scheduling
                 {
-                    new AttachedDisk
-                    {
-                        Type = "PERSISTENT",
-                        Boot = true,
-                        Mode = "READ_WRITE",
-                        DeviceName = "root-disk",
-                        AutoDelete = true,
-                        InitializeParams = new AttachedDiskInitializeParams 
-                        {
-                            SourceImage = "projects/debian-cloud/global/images/" + SourceImage,
-                            DiskType = "zones/" + Zone + "/diskTypes/" + DiskType
-                        }
-                    }
+                    OnHostMaintenance = "MIGRATE",
+                    AutomaticRestart = true
                 },
+                Name = InstanceName,
+                MachineType = "zones/" + Zone + "/machineTypes/" + MachineType,
                 ServiceAccounts = new List<ServiceAccount> 
                 {
                     new ServiceAccount
@@ -104,22 +116,15 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
                         Email = "default",
                         Scopes = new[] {  "https://www.googleapis.com/auth/devstorage.read_only", "https://www.googleapis.com/auth/logging.write"}
                     }
-                },
-                CanIpForward = false,
-                Scheduling = new Scheduling
-                {
-                    OnHostMaintenance = "MIGRATE",
-                    AutomaticRestart = true
                 }
             };
-
             try
             {
-                var newInstanceQuery = await new InstancesResource.InsertRequest(service, newInstance, ProjectId, Zone).ExecuteAsync();        
+                var newInstanceQuery = await new InstancesResource.InsertRequest(service, newInstance, ProjectId, Zone).ExecuteAsync();
             }
-            catch (Exception e)
+            catch (AggregateException e)
             {
-                throw new Exception(e.Message);
+                throw new AggregateException(e);
             }
         }
 
@@ -138,14 +143,26 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
                 HttpClientInitializer = credential,
                 ApplicationName = "Apprenda Addon",
             });
+            var startTime = DateTime.UtcNow;
+         //   while(DateTime.UtcNow - startTime < TimeSpan.FromSeconds(60))
+            while (true)
+            {
+                var instance = new InstancesResource.GetRequest(service, ProjectId, Zone, InstanceName).Execute();
+                if (instance.Status == "RUNNING")
+                    break;
+                if(DateTime.UtcNow - startTime < TimeSpan.FromMinutes(2))
+                {
+                    throw new Exception("Remove instance timed out\n");
+                }
+            }
 
             try
             {
                 var removeInstanceQuery = await new InstancesResource.DeleteRequest(service, ProjectId, Zone, InstanceName).ExecuteAsync();
             }
-            catch(Exception e)
+            catch(AggregateException e)
             {
-                throw new Exception(e.Message);
+                throw new AggregateException(e);
             }
         }
 
@@ -155,9 +172,9 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
             {
                 AddInstanceTask().Wait();
             }
-            catch (Exception e)
+            catch (AggregateException e)
             {
-                throw new Exception(e.Message);
+                throw new AggregateException(e);
             }
         }
 
@@ -167,9 +184,9 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
             {
                 RemoveInstanceTask().Wait();
             }
-            catch(Exception e)
+            catch (AggregateException e)
             {
-                throw new Exception(e.Message);
+                throw new AggregateException(e);
             }
         }
     }

@@ -1,5 +1,6 @@
 ﻿using System;
 using Apprenda.Services.Logging;
+using System.Threading;
 
 namespace Apprenda.SaaSGrid.Addons.Google.Compute
 {
@@ -13,7 +14,7 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
             var deprovisionResult = new ProvisionAddOnResult(connectionData);
             AddonManifest manifest = request.Manifest;
             var developerParameters = request.DeveloperParameters;
-            var developerOptions = GoogleCloudDeveloperOptions.Parse(developerParameters, manifest);
+            var developerOptions = GoogleCloudDeveloperOptions.Parse(developerParameters);
             try
             {
                 var conInfo = ConnectionInfo.Parse(connectionData);
@@ -38,7 +39,7 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
             var provisionResult = new ProvisionAddOnResult("") { IsSuccess = false };
             var manifest = request.Manifest;
             var developerParameters = request.DeveloperParameters;
-            var developerOptions = GoogleCloudDeveloperOptions.Parse(developerParameters, manifest);
+            var developerOptions = GoogleCloudDeveloperOptions.Parse(developerParameters);
             try
             {
                 //add instance
@@ -64,7 +65,7 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
             var manifest = request.Manifest;
             
             var developerParameters = request.DeveloperParameters;
-            var developerOptions = GoogleCloudDeveloperOptions.Parse(developerParameters, manifest);
+            var developerOptions = GoogleCloudDeveloperOptions.Parse(developerParameters);
             testProgress += "Attempting to add an instance...";
             try
             {
@@ -74,24 +75,29 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
                 testProgress += "Successfully added instance.\n";
                 try
                 {
-                    System.Threading.Thread.Sleep(10000);
                     //remove instance
                     testProgress += "Attempting to remove an instance...";
                     op.RemoveInstance();
                     testProgress += "Successfully removed instance.\n";
                     testResult.IsSuccess = true;
                 }
-                catch(Exception e)
+                catch(AggregateException e)
                 {
-                    Log.Error("Error occurred during test of Google Cloud Addon", e);
-                    testProgress += "EXCEPTION: " + e + "\n";
+                    foreach (var err in e.InnerExceptions)
+                    {
+                        Log.Error("Error occurred during test of Google Cloud Addon", err);
+                        testProgress += "EXCEPTION: " + err + "\n";
+                    }
                     testProgress += "Failed to remove instance \n";
                 }
             }
-            catch(Exception e)
+            catch (AggregateException e)
             {
-                Log.Error("Error occurred during test of Google Cloud Addon", e);
-                testProgress += "EXCEPTION: " + e + "\n";
+                foreach (var err in e.InnerExceptions)
+                {
+                    Log.Error("Error occurred during test of Google Cloud Addon", err);
+                    testProgress += "EXCEPTION: " + err + "\n";
+                }
                 testProgress += "Failed to add instance \n";
             }
             testResult.EndUserMessage = testProgress;
