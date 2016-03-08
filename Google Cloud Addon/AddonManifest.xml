@@ -4,7 +4,7 @@
                xmlns="http://schemas.apprenda.com/AddonManifest"
                name="Google VM Addon"
                description="Manage VM instances in Google Compute Engine"
-               deploymentNotes="Configured to work in Apprenda 6.0"
+               deploymentNotes="Configured to work in Apprenda 6.5"
                developerHelp=""
                vendor="Apprenda"
                author="Jazmine Olinger"
@@ -15,7 +15,7 @@
                manifestVersion="2">
   <properties>
     <property key="ProjectID" displayName="project ID" description="Required - please supply the google cloud project ID" value=""/>
-    <property key="Email" displayName="Service account email" description="Required - please supply an the service account email" value=""/>
+    <property key="Email" displayName="Service account email" description="Required - please supply the service account email" value=""/>
     <property key="CertFile" displayName="Certificate File" description="Required - please supply the path to the certificate file" value="" />
   </properties>
   <parameters allowUserDefinedParameters="true">

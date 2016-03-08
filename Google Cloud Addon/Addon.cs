@@ -73,6 +73,9 @@ namespace Apprenda.SaaSGrid.Addons.Google.Compute
                 var op = new InstanceOperations(manifest, developerOptions);
                 op.AddInstance();
                 testProgress += "Successfully added instance.\n";
+                //wait for instance to finishing adding
+                Thread.Sleep(120000);
+
                 try
                 {
                     //remove instance
